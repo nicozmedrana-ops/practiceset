@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Output 6 - Reachable Buildings (BFS)</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#ffffff; --ink:#18202c; --ink2:#566070; --ink3:#8a93a1; --line:#dfe3e9;
+  --hl:#e6f0ff; --hl-bar:#2563eb;
+  --gray-f:#e7e9ed; --gray-s:#9aa2af; --gray-t:#3a4350;
+  --amber-f:#fde7b0; --amber-s:#d99a1c; --amber-t:#5a3b00;
+  --purple-f:#ddd6fb; --purple-s:#6d5bd0; --purple-t:#2c2370;
+  --teal-f:#c3ecde; --teal-s:#1f9a76; --teal-t:#0a4a38;
+  --edge:#b5bcc8; --edge-cur:#6d5bd0; --edge-nb:#e8a21a;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#12161c; --panel:#1b212a; --ink:#eef1f5; --ink2:#a9b2c0; --ink3:#6f7886; --line:#2c3441;
+    --hl:#1d3157; --hl-bar:#6aa0ff;
+    --gray-f:#2c333e; --gray-s:#6d7686; --gray-t:#d3d8e0;
+    --amber-f:#5a4310; --amber-s:#e3a928; --amber-t:#ffe7ae;
+    --purple-f:#3a3270; --purple-s:#9a8cf0; --purple-t:#e6e1ff;
+    --teal-f:#124a3b; --teal-s:#3ec29b; --teal-t:#c9f5e8;
+    --edge:#4a5463; --edge-cur:#9a8cf0; --edge-nb:#f0b43a;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 24px 40px}
+header{margin-bottom:18px}
+h1{font-size:26px;font-weight:600;margin:0 0 4px;letter-spacing:-0.01em}
+header p{margin:0;color:var(--ink2);font-size:16px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:20px;align-items:start}
+@media (max-width:980px){.layout{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.controls{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+button{font:inherit;font-size:15px;padding:8px 16px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--ink3)}
+button:focus-visible{outline:2px solid var(--hl-bar);outline-offset:2px}
+button.primary{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+#pos{margin-left:auto;color:var(--ink2);font-size:14px}
+#msg{font-size:17px;min-height:78px;margin:0 0 6px}
+svg{width:100%;height:auto;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--ink2);margin-top:4px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:1.5px solid}
+.legend b{display:inline-block;width:16px;height:4px;background:var(--edge-nb);margin-right:6px;vertical-align:middle;border-radius:2px}
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+.stats3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px}
+.stat{background:var(--bg);border-radius:8px;padding:10px 14px}
+.stat .k{font-size:13px;color:var(--ink2)}
+.stat .v{font-size:20px;font-weight:600;min-height:30px;font-variant-numeric:tabular-nums}
+.stat .v.big{font-size:24px}
+.node circle{stroke-width:2;transition:fill .25s,stroke .25s}
+.node text{font-size:16px;font-weight:600;transition:fill .25s}
+.s-gray circle{fill:var(--gray-f);stroke:var(--gray-s)} .s-gray text{fill:var(--gray-t)}
+.s-amber circle{fill:var(--amber-f);stroke:var(--amber-s)} .s-amber text{fill:var(--amber-t)}
+.s-purple circle{fill:var(--purple-f);stroke:var(--purple-s)} .s-purple text{fill:var(--purple-t)}
+.s-teal circle{fill:var(--teal-f);stroke:var(--teal-s)} .s-teal text{fill:var(--teal-t)}
+.island{font-size:13px;fill:var(--ink2)}
+#code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;font-size:13px;line-height:1.7;padding:12px 0;overflow-x:auto}
+#code .row{display:flex;border-left:4px solid transparent;padding-right:14px;min-width:max-content}
+#code .n{width:40px;text-align:right;padding-right:14px;color:var(--ink3);flex:none;user-select:none}
+#code .t{white-space:pre;color:var(--ink2)}
+#code .row.on{background:var(--hl);border-left-color:var(--hl-bar)}
+#code .row.on .t{color:var(--ink);font-weight:600}
+.hint{margin-top:10px;font-size:13px;color:var(--ink3)}
+@media (prefers-reduced-motion: reduce){.node circle,.node text{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Output 6: reachable buildings</h1>
+    <p>countReachableBuildings(101) walks the graph with breadth-first search and counts every building it finds.</p>
+  </header>
+
+  <div class="layout">
+    <section class="card" aria-label="Graph and state">
+      <div class="controls">
+        <button id="prev">Back</button>
+        <button id="next" class="primary">Next</button>
+        <button id="reset">Reset</button>
+        <span id="pos"></span>
+      </div>
+      <p id="msg" aria-live="polite"></p>
+
+      <svg viewBox="0 0 680 260" role="img" aria-label="Campus graph with seven buildings. Buildings 101 to 105 are connected. 106 and 107 are a separate pair.">
+        <g id="edges"></g>
+        <g id="nodes"></g>
+        <text class="island" x="595" y="105" text-anchor="middle">Separate island</text>
+      </svg>
+
+      <div class="legend">
+        <span><i style="background:var(--gray-f);border-color:var(--gray-s)"></i>Not found yet</span>
+        <span><i style="background:var(--amber-f);border-color:var(--amber-s)"></i>In queue</span>
+        <span><i style="background:var(--purple-f);border-color:var(--purple-s)"></i>Processing now</span>
+        <span><i style="background:var(--teal-f);border-color:var(--teal-s)"></i>Done</span>
+        <span><b></b>Neighbor being checked</span>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><div class="k">queue (front to rear)</div><div class="v" id="q"></div></div>
+        <div class="stat"><div class="k">visited</div><div class="v" id="v"></div></div>
+      </div>
+      <div class="stats3">
+        <div class="stat"><div class="k">front</div><div class="v big" id="f"></div></div>
+        <div class="stat"><div class="k">rear</div><div class="v big" id="r"></div></div>
+        <div class="stat"><div class="k">visitedCount</div><div class="v big" id="c"></div></div>
+      </div>
+      <div class="hint">Keyboard: right arrow or space for next, left arrow for back, R to reset.</div>
+    </section>
+
+    <section class="card" aria-label="Java code" style="padding:0">
+      <div id="code"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+var disp=[
+[1,'public void countReachableBuildings(int startData) {'],
+[2,'    Vertex start = findVertex(startData);'],
+[3,'    System.out.println();'],
+[4,'    System.out.println("OUTPUT 6 - REACHABLE BUILDINGS");'],
+[5,'    if (start == null) { ... return; }'],
+[8,'    Vertex[] queue = new Vertex[vertices.getSize()];'],
+[9,'    Vertex[] visited = new Vertex[vertices.getSize()];'],
+[10,'    int front = 0;'],
+[11,'    int rear = 0;'],
+[12,'    int visitedCount = 0;'],
+[13,'    queue[rear] = start;'],
+[14,'    rear++;'],
+[15,'    visited[visitedCount] = start;'],
+[16,'    visitedCount++;'],
+[17,'    while (front < rear) {'],
+[18,'        Vertex current = queue[front];'],
+[19,'        front++;'],
+[20,'        for (int i = 0; i < current.getNeighbors().getSize(); i++) {'],
+[21,'            Vertex neighbor = current.getNeighbors().getVertex(i);'],
+[22,'            boolean alreadyVisited = false;'],
+[23,'            for (int j = 0; j < visitedCount; j++) {'],
+[24,'                if (visited[j] == neighbor) {'],
+[25,'                    alreadyVisited = true;'],
+[26,'                    break;'],
+[27,'            if (!alreadyVisited) {'],
+[28,'                visited[visitedCount] = neighbor;'],
+[29,'                visitedCount++;'],
+[30,'                queue[rear] = neighbor;'],
+[31,'                rear++;'],
+[32,'    System.out.println("Starting Building: " + startData);'],
+[33,'    System.out.println("Number of Reachable Buildings: " + visitedCount);']
+];
+var codeEl=document.getElementById('code'),lineNo={};
+disp.forEach(function(d){
+  var row=document.createElement('div');row.className='row';
+  var n=document.createElement('span');n.className='n';n.textContent=d[0];
+  var t=document.createElement('span');t.className='t';t.textContent=d[1];
+  row.appendChild(n);row.appendChild(t);codeEl.appendChild(row);lineNo[d[0]]=row;
+});
+
+var adj={101:[102,103],102:[101,104],103:[101,104],104:[102,103,105],105:[104],106:[107],107:[106]};
+var pos={101:[90,130],102:[230,55],103:[230,205],104:[370,130],105:[500,205],106:[560,55],107:[630,55]};
+var edgeList=[[101,102],[101,103],[102,104],[103,104],[104,105],[106,107]];
+var ns='http://www.w3.org/2000/svg';
+var eg=document.getElementById('edges'),ng=document.getElementById('nodes');
+var edgeEls={},nodeEls={};
+edgeList.forEach(function(e){
+  var l=document.createElementNS(ns,'line');
+  l.setAttribute('x1',pos[e[0]][0]);l.setAttribute('y1',pos[e[0]][1]);
+  l.setAttribute('x2',pos[e[1]][0]);l.setAttribute('y2',pos[e[1]][1]);
+  l.setAttribute('stroke-linecap','round');
+  eg.appendChild(l);edgeEls[e[0]+'-'+e[1]]=l;
+});
+Object.keys(pos).forEach(function(k){
+  var g=document.createElementNS(ns,'g');g.setAttribute('class','node s-gray');
+  var c=document.createElementNS(ns,'circle');
+  c.setAttribute('cx',pos[k][0]);c.setAttribute('cy',pos[k][1]);c.setAttribute('r',26);
+  var t=document.createElementNS(ns,'text');
+  t.setAttribute('x',pos[k][0]);t.setAttribute('y',pos[k][1]);
+  t.setAttribute('text-anchor','middle');t.setAttribute('dominant-baseline','central');
+  t.textContent=k;
+  g.appendChild(c);g.appendChild(t);ng.appendChild(g);nodeEls[k]=g;
+});
+
+var steps=[];
+var visited=[],queue=[],front=0,rear=0,vc=0;
+function snap(lines,msg,cur,nb){
+  steps.push({lines:lines,msg:msg,cur:cur,nb:nb,
+    waiting:queue.slice(front,rear),visited:visited.slice(0,vc),
+    done:queue.slice(0,cur===null?front:front-1),front:front,rear:rear,vc:vc});
+}
+snap([1,2,3,4,5],'Call the method with 101. findVertex returns the Vertex, so start is not null and we keep going.',null,null);
+snap([8,9,10,11,12],'Create the empty queue and visited arrays. front, rear and visitedCount all start at 0.',null,null);
+queue[rear]=101;rear++;visited[vc]=101;vc++;
+snap([13,14,15,16],'Put 101 in the queue and mark it visited. rear becomes 1 and visitedCount becomes 1.',null,null);
+while(front<rear){
+  var cur=queue[front];front++;
+  snap([17,18,19],'The queue is not empty, so take '+cur+' from the front. front moves forward.',cur,null);
+  adj[cur].forEach(function(n){
+    var seen=visited.slice(0,vc).indexOf(n)>=0;
+    if(seen){
+      snap([20,21,22,23,24,25,26],'Check neighbor '+n+'. It is already in visited, so alreadyVisited becomes true and we skip it.',cur,n);
+    }else{
+      visited[vc]=n;vc++;queue[rear]=n;rear++;
+      snap([20,21,22,23,27,28,29,30,31],'Check neighbor '+n+'. It is not in visited, so mark it visited (visitedCount = '+vc+') and add it to the queue.',cur,n);
+    }
+  });
+}
+snap([17,32,33],'front equals rear, so the loop ends. Output: Starting Building: 101 and Number of Reachable Buildings: '+vc+'. Buildings 106 and 107 are never reached.',null,null);
+
+var i=0;
+function stateOf(k,s){
+  if(s.cur==k)return 's-purple';
+  if(s.done.indexOf(+k)>=0)return 's-teal';
+  if(s.waiting.indexOf(+k)>=0)return 's-amber';
+  return 's-gray';
+}
+function render(){
+  var s=steps[i];
+  Object.keys(nodeEls).forEach(function(k){nodeEls[k].setAttribute('class','node '+stateOf(k,s));});
+  edgeList.forEach(function(e){
+    var l=edgeEls[e[0]+'-'+e[1]];
+    var hotCur=s.cur!==null&&(e[0]==s.cur||e[1]==s.cur);
+    var hotNb=s.nb!==null&&((e[0]==s.cur&&e[1]==s.nb)||(e[1]==s.cur&&e[0]==s.nb));
+    l.setAttribute('stroke',hotNb?'var(--edge-nb)':(hotCur?'var(--edge-cur)':'var(--edge)'));
+    l.setAttribute('stroke-width',hotNb?'5':(hotCur?'3':'2'));
+  });
+  document.getElementById('q').textContent=s.waiting.length?s.waiting.join('  '):'empty';
+  document.getElementById('v').textContent=s.visited.length?s.visited.join('  '):'empty';
+  document.getElementById('f').textContent=s.front;
+  document.getElementById('r').textContent=s.rear;
+  document.getElementById('c').textContent=s.vc;
+  document.getElementById('msg').textContent=s.msg;
+  document.getElementById('pos').textContent='Step '+(i+1)+' of '+steps.length;
+  Object.keys(lineNo).forEach(function(k){
+    lineNo[k].className='row'+(s.lines.indexOf(+k)>=0?' on':'');
+  });
+}
+function next(){if(i<steps.length-1){i++;render();}}
+function prev(){if(i>0){i--;render();}}
+document.getElementById('next').onclick=next;
+document.getElementById('prev').onclick=prev;
+document.getElementById('reset').onclick=function(){i=0;render();};
+document.addEventListener('keydown',function(e){
+  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();next();}
+  else if(e.key==='ArrowLeft'){prev();}
+  else if(e.key==='r'||e.key==='R'){i=0;render();}
+});
+render();
+</script>
+</body>
+</html>
